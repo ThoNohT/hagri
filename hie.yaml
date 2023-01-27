@@ -1,0 +1,13 @@
+cradle:
+  cabal:
+    - path: "app/Main.hs"
+      component: "hagri:exe:hagri"
+
+    - path: "app/Compiler.hs"
+      component: "hagri:exe:hagri"
+
+    - path: "app/Parser.hs"
+      component: "hagri:exe:hagri"
+
+    - path: "app/RevisionInfo.hs"
+      component: "hagri:exe:hagri"
