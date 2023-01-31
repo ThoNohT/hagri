@@ -16,10 +16,11 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - uses: actions/setup-haskell@v1
-      with:
-        ghc-version: '9.2.4'
-        cabal-version: '3.6'
+    
+    - name: Prepare haskell
+      run: |
+        ghcup install ghc 9.2.4
+        ghcup install cabal 3.6
 
     - name: Cache
       uses: actions/cache@v3
@@ -37,5 +38,6 @@ jobs:
       run: |
         cabal update
         cabal build --only-dependencies
+        
     - name: Build
       run: ./build.sh release
