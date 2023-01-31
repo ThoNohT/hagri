@@ -34,10 +34,10 @@ jobs:
           ${{ runner.os }}-build-
           ${{ runner.os }}-
 
-    - name: Install dependencies
-      run: |
-        cabal update
-        cabal build --only-dependencies
+    # - name: Install dependencies
+    #   run: |
+    #     cabal update
+    #     cabal build --only-dependencies
 
     - name: Build
       run: ./build.sh release
