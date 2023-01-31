@@ -23,7 +23,6 @@ jobs:
         ghcup set ghc 9.2.5
         ghcup install cabal 3.6.2.0
         ghcup set cabal 3.6.2.0
-        cabal update
 
     - name: Cache
       uses: actions/cache@v3
@@ -37,10 +36,16 @@ jobs:
           ${{ runner.os }}-build-
           ${{ runner.os }}-
 
-    # - name: Install dependencies
-    #   run: |
-    #     cabal update
-    #     cabal build --only-dependencies
+    - name: Install dependencies
+      run: |
+        cabal update
+        cabal build --only-dependencies
 
     - name: Build
       run: ./build.sh release
+
+    - name: Create Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: hagri-linux
+        path: hagri
