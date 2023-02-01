@@ -1,15 +1,17 @@
 module RevisionInfo (RevisionInfo (..), get) where
 
+import Control.Applicative (some, (<|>))
 import Control.Exception (try)
-import Control.Monad (when)
+import Control.Monad (when, void)
+import Data.Char (isAlphaNum, isNumber)
 import Data.IORef (modifyIORef, newIORef, readIORef)
 import Data.Maybe (fromMaybe)
 import Data.Time (LocalTime, ZonedTime, getZonedTime)
 import GHC.Exception (SomeException)
-import Shared.Util (filterMaybe, rightToMaybe)
+import Shared.Parser (Parser, char, check, end, pString, pChar, runParser)
+import Shared.Util (filterMaybe, rightToMaybe, justOrThrow)
 import System.Exit (ExitCode (..))
 import System.Process (CreateProcess (..), StdStream (..), readProcessWithExitCode)
-import Text.Regex.PCRE ((=~))
 
 -- | Information about the current git revirion.
 data RevisionInfo = RevisionInfo
@@ -34,23 +36,44 @@ defaultRevisionInfo now =
     , currentTime = now
     }
 
--- Retrieves the current revision info.
+-- | The output of the describe command.
+data Describe = DSingle String Bool | DSeparate String Int Bool
+
+-- | A parser for the result of the describe command.
+describeParser :: Parser Describe
+describeParser = singleParser <|> separateParser
+  where
+    -- On tag    : tag(-dirty)
+    -- Not on tag: hash(-dirty)
+    singleParser = do
+      hashOrTag <- some (check isAlphaNum char)
+      isDirty <- (False <$ end) <|> (True <$ pString "-dirty" <* end)
+      pure $ DSingle hashOrTag isDirty
+
+    -- After tag : tag-dist-hash(-dirty)
+    separateParser = do
+      tag <- some (check isAlphaNum char)
+      void $ pChar '-'
+      dist <- number
+      void $ pChar '-'
+      void $ some (check isAlphaNum char) -- Ignore the hash.
+      isDirty <- (False <$ end) <|> (True <$ pString "-dirty" <* end)
+      pure $ DSeparate tag dist isDirty
+
+    number = read @Int <$> some (check isNumber char)
+
+-- | Retrieves the current revision info.
 get :: Maybe String -> IO RevisionInfo
 get tagFilter =
   let
     -- Get data from the describe command.
-    getDescribe :: String -> String -> (Maybe String, Maybe Int, Bool)
-    getDescribe commitHash describeOutput =
-      let
-        describeRegex :: String = "\\A(.+?)(-(\\d+)-(\\w+))?(-dirty)?\\Z"
-        (_, _, _, [tag, _, dist, hash, dirty]) =
-          describeOutput =~ describeRegex :: (String, String, String, [String])
-        tagFound = not $ tag == take 7 commitHash
-       in
-        ( if tagFound then Just tag else Nothing
-        , read <$> filterMaybe (not . null) dist
-        , dirty == "-dirty"
-        )
+    getDescribe :: String -> Describe -> (Maybe String, Maybe Int, Bool)
+    getDescribe commitHash describe =
+        case describe of
+          DSingle hashOrTag isDirty
+            | hashOrTag == take 7 commitHash -> (Nothing, Nothing, isDirty)
+            | otherwise -> (Just hashOrTag, Just 0, isDirty)
+          DSeparate tag dist isDirty -> (Just tag, Just dist, isDirty)
    in
     do
       revParse <- execute "git" ["rev-parse", "HEAD"]
@@ -61,7 +84,8 @@ get tagFilter =
           -- We expect describe to succeed, since the previous command also succeeded.
           let match = fromMaybe "*" tagFilter
           describeOutput <- head <$> execute_ "git" ["describe", "--always", "--dirty", "--match", match]
-          pure $ case getDescribe commitHash describeOutput of
+          describe <- justOrThrow "Describe command could not be interpreted." $ fst <$> runParser describeParser describeOutput
+          pure $ case getDescribe commitHash describe of
             (Nothing, _, dirty) -> ri{dirty = dirty}
             (Just tag, dist, dirty) -> ri{tag = Just tag, tagDistance = fromMaybe 0 dist, dirty = dirty}
 
