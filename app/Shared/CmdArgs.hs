@@ -3,9 +3,7 @@ module Shared.CmdArgs (SettingsArgs (..), get) where
 import Control.Monad (foldM)
 import Data.Bifunctor (Bifunctor)
 import Data.Char (toLower)
-import Data.List (find)
-import Data.Set (Set)
-import Data.Set qualified as Set
+import Data.List (elem, find)
 import Shared.Util (maybeToEither)
 
 -----
@@ -41,7 +39,7 @@ class Ord s => SettingsArgs s ss | s -> ss, ss -> s where
 data SpState s = LookingForArg | ProcessingArg (s, String)
 
 -- | Contains settings, and the set of settings that are already applied.
-data Sets s ss = Sets ss (Set s)
+data Sets s ss = Sets ss [s]
 
 -- | Functor instance for Sets, so we can easily update the settings.
 instance Functor (Sets s) where
@@ -54,7 +52,7 @@ instance Functor (Sets s) where
 -- | Gets the settings from the provided command line arguments, given an implementation of the SettingsArgs typeclass.
 get :: forall s ss. SettingsArgs s ss => [String] -> Either String ss
 get args = do
-  processedArgs <- foldM nextParam (Sets defaultSettings Set.empty, LookingForArg) args
+  processedArgs <- foldM nextParam (Sets defaultSettings [], LookingForArg) args
   Sets finished _ <- finishProcessing processedArgs
   case validateSettings finished of
     Nothing -> pure finished
@@ -98,7 +96,7 @@ getSetting ('-' : name) =
 getSetting arg = Left $ "Expected a parameter name, but got '" ++ arg ++ "'."
 
 -- | Marks a setting as set. Fails if it was already set.
-markSet :: SettingsArgs s ss => String -> s -> (Sets s ss) -> Either String (Sets s ss)
+markSet :: SettingsArgs s ss => String -> s -> Sets s ss -> Either String (Sets s ss)
 markSet arg set (Sets sets applied)
-  | Set.member set applied = Left $ "Setting '" ++ arg ++ "' is set more than once."
-  | otherwise = pure $ Sets sets (Set.insert set applied)
+  | set `elem` applied = Left $ "Setting '" ++ arg ++ "' is set more than once."
+  | otherwise = pure $ Sets sets (set : applied)

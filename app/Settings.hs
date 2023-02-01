@@ -5,8 +5,6 @@ import Control.Monad (foldM)
 import Data.Char (toLower)
 import Data.List (elemIndex, find)
 import Data.Maybe (isJust)
-import Data.Set (Set)
-import Data.Set qualified as Set (empty, insert, member)
 import Shared.CmdArgs (SettingsArgs (..))
 import Shared.Util (maybeToEither, (!?))
 
