@@ -7,10 +7,8 @@ module Shared.Parser (
   choice,
   -- String parsers.
   pString,
-  pStringCi,
   pSubString,
   pChar,
-  pCharCi,
   escaped,
   char,
   end,
@@ -78,10 +76,6 @@ choice (x : xs) = x <|> choice xs
 pString :: String -> Parser String
 pString = mapM pChar
 
--- | Parses a specific string, case insensitive.
-pStringCi :: String -> Parser String
-pStringCi = mapM pCharCi
-
 -- | Parses a substring of the provided string. succeeds even if no character matched.
 pSubString :: String -> Parser String
 pSubString [] = pure []
@@ -94,10 +88,6 @@ escaped = pChar '\\' *> char
 -- | Parsers a specific char.
 pChar :: Char -> Parser Char
 pChar c = check (== c) char
-
--- | Parse a specific char, case insensitive.
-pCharCi :: Char -> Parser Char
-pCharCi c = check (\x -> toLower x == toLower c) char
 
 -- | A parser consumes and returns the next character. Fails if there is no input left.
 char :: Parser Char

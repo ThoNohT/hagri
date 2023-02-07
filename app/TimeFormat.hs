@@ -10,7 +10,7 @@ import Data.Time.Calendar.OrdinalDate (toOrdinalDate)
 import Data.Time.Calendar.WeekDate (toWeekDate)
 import Data.Time.Format (defaultTimeLocale, formatTime)
 import GHC.IO (unsafePerformIO)
-import Shared.Parser (Parser, char, check, choice, escaped, pChar, pString, pStringCi, pSubString, runParser)
+import Shared.Parser (Parser, char, check, choice, escaped, pChar, pString, pSubString, runParser)
 import Shared.Util (takeLast)
 import Text.Printf (printf)
 
