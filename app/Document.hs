@@ -10,7 +10,7 @@ module Document (
 
 import Control.Applicative (empty, many, (<|>))
 import Control.Monad (void)
-import Data.Char (isAlphaNum)
+import Data.Char (isAlpha, isAlphaNum)
 import Data.List (find)
 import Data.Maybe (fromMaybe)
 import Data.Ord (clamp)
@@ -78,12 +78,15 @@ parser = Document <$> (many (placeholder <|> Text <$> char) <* end)
 
     paramName :: Parser String
     paramName = do
-      first <- alphaNum
+      first <- alpha
       rest <- many alphaNum
       pure $ first : rest
 
     alphaNum :: Parser Char
     alphaNum = check isAlphaNum char
+
+    alpha :: Parser Char
+    alpha = check isAlpha char
 
     wildcard :: Parser ParamElem
     wildcard = Wildcard <$ pChar '*'
